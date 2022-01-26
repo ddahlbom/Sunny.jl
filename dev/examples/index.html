@@ -26,7 +26,7 @@ sampler = LangevinSampler(sys, kT, α, Δt, nsteps)</code></pre><p>At this point
                    # The maximum frequency we resolve is set by 2π/(meas_rate * Δt)
 dyn_meas = 400     # Total number of frequencies we&#39;d like to resolve
 dynsf = dynamic_structure_factor(
-    sys, sampler; therm_samples=10, dynΔt=Δt, meas_rate=meas_rate,
+    sys, sampler; nsamples=10, dynΔt=Δt, meas_rate=meas_rate,
     dyn_meas=dyn_meas, bz_size=(1,1,2), thermalize=10, verbose=true,
     reduce_basis=true, dipole_factor=false,
 )
@@ -70,7 +70,7 @@ meas_rate = convert(Int, div(2π, (2 * target_max_ω * Δt)))
 sampler = MetropolisSampler(system, kT, 500)
 println(&quot;Starting structure factor measurement...&quot;)
 dynsf = dynamic_structure_factor(
-    system, sampler; therm_samples=15, thermalize=15,
+    system, sampler; nsamples=15, thermalize=15,
     bz_size=(2,0,0), reduce_basis=true, dipole_factor=true,
     dynΔt=Δt, meas_rate=meas_rate, dyn_meas=1000, verbose=true, 
 )</code></pre><p>Here, given the full complex-valued <span>$\mathcal{S}^{\alpha \beta}(\boldsymbol{q}, \omega)$</span>, we are asking with <code>dipole_factor=true</code> to have this reduced to a single real-value  by projecting each <code>\mathcal{S}^{\alpha \beta}</code> using the neutron dipole factor. (See <a href="../library/#Structure-factor-calculations">Structure factor calculations</a>. To be truly comparable to experiment, a few more steps of processing need to be done which are currently unimplemented.)</p><p>(Will add info here about plotting when better structure factor plotting functions are implemented.)</p><p>In the following example, we&#39;ll take a closer look at how to make some more manual measurements of the system.</p><h2 id="Example-3:-Making-manual-measurements-within-a-Monte-Carlo-simulation"><a class="docs-heading-anchor" href="#Example-3:-Making-manual-measurements-within-a-Monte-Carlo-simulation">Example 3: Making manual measurements within a Monte Carlo simulation</a><a id="Example-3:-Making-manual-measurements-within-a-Monte-Carlo-simulation-1"></a><a class="docs-heading-anchor-permalink" href="#Example-3:-Making-manual-measurements-within-a-Monte-Carlo-simulation" title="Permalink"></a></h2><p>In this example, we will perform an extended Monte Carlo simulation of the same system as in the previous example, but will perform a careful thermal annealing down to low temperatures and measure an <span>$E(T)$</span> curve along the way. To do so, we will need to use the sampling tools a bit more manually.</p><p>As we&#39;re using the same system as before, the setup will be identical. The lines are copied below for convenience, but see the previous example for an explanation of each step.</p><pre><code class="language-julia hljs">crystal = Crystal(&quot;./FeI2.cif&quot;)
@@ -123,8 +123,7 @@ p = plot(temps, energies, yerror=energy_errors, marker=:true, ms=3, label=&quot;
 xlabel!(L&quot;$T$ [K]&quot;)
 ylabel!(L&quot;$E$ [K]&quot;)
 p</code></pre><p>If all has gone well, you should get a plot that looks something like the following:</p><p><img src="../assets/FeI2_ETcurve.png" alt="FeI₂ Energy Curve"/></p><p>We can take a look at the final low-energy spin configuration by:</p><pre><code class="language-julia hljs">using GLMakie
-plot_spins(system; arrowsize=1.5, arrowlength=3, linewidth=0.5)</code></pre><p>You should see antiferromagnetic stripes within each <span>$c$</span>-plane, which shift by one as you move up each plane!</p><h2 id="Symmetry-analysis"><a class="docs-heading-anchor" href="#Symmetry-analysis">Symmetry analysis</a><a id="Symmetry-analysis-1"></a><a class="docs-heading-anchor-permalink" href="#Symmetry-analysis" title="Permalink"></a></h2><p>When defining pair interactions, we are always defining the interactions on entire symmetry classes at the same time. To do this, we need to provide the exchange matrix <span>$J$</span> for a specific <code>Bond</code>, which is then automatically propagated to all symmetry-equivalent bonds. Any given bond has symmetry constraints that restrict the allowed space of <span>$3 \times 3$</span> coupling matrices.</p><p>To discover the symmetry allowed couplings for all bonds up to a certain distance, we can use the function <a href="../library/#Sunny.print_bond_table"><code>print_bond_table</code></a>.</p><pre><code class="nohighlight hljs">lat_vecs = lattice_vectors(1, 1, 1, 90, 90, 90)
-crystal = Sunny.diamond_crystal()
+plot_spins(system; arrowsize=1.5, arrowlength=3, linewidth=0.5)</code></pre><p>You should see antiferromagnetic stripes within each <span>$c$</span>-plane, which shift by one as you move up each plane!</p><h2 id="Symmetry-analysis"><a class="docs-heading-anchor" href="#Symmetry-analysis">Symmetry analysis</a><a id="Symmetry-analysis-1"></a><a class="docs-heading-anchor-permalink" href="#Symmetry-analysis" title="Permalink"></a></h2><p>When defining pair interactions, we are always defining the interactions on entire symmetry classes at the same time. To do this, we need to provide the exchange matrix <span>$J$</span> for a specific <code>Bond</code>, which is then automatically propagated to all symmetry-equivalent bonds. Any given bond has symmetry constraints that restrict the allowed space of <span>$3 \times 3$</span> coupling matrices.</p><p>To discover the symmetry allowed couplings for all bonds up to a certain distance, we can use the function <a href="../library/#Sunny.print_bond_table"><code>print_bond_table</code></a>.</p><pre><code class="nohighlight hljs">crystal = Sunny.diamond_crystal()
 print_bond_table(crystal, 1.0)</code></pre><p>which prints</p><pre><code class="nohighlight hljs">Atom 1, position [0, 0, 0], multiplicity 8
 Allowed single-ion anisotropy or g-tensor: | A  0  0 |
                                            | 0  A  0 |
@@ -159,7 +158,7 @@ Allowed exchange matrix: | A  0  0 |
                          | 0  B  0 |
                          | 0  0  B |</code></pre><p>Each entry above makes reference to a specific <code>Bond</code>, but implicitly refers to an entire class of symmetry equivalent bonds. For example, there are 4 symmetry equivalent nearest neighbors in the diamond lattice (coordination number 4). To find the ones starting from atom 2 we can use <a href="../library/#Sunny.all_symmetry_related_bonds_for_atom"><code>all_symmetry_related_bonds_for_atom</code></a>,</p><pre><code class="nohighlight hljs">julia&gt; all_symmetry_related_bonds_for_atom(crystal, 2, Bond(2, 3, [0, 0, 0]))
 
-4-element Vector{Bond{3}}:
+4-element Vector{Bond}:
  Bond(2, 7, [0, 0, -1])
  Bond(2, 8, [0, 0, -1])
  Bond(2, 3, [0, 0, 0])
@@ -168,7 +167,7 @@ Allowed exchange matrix: | A  0  0 |
 Bond(1, 6, [1, -1, 0])
 Distance 1.225, coordination 24
 Connects [0, 0, 0] to [1, -0.5, 0.5]
-Allowed exchange matrix: |   A  D+E -D-E |
-                         | D-E    B    C |
-                         |-D+E    C    B |
-Allowed DM vector: [0 E E]</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../getting-started/">« Getting Started</a><a class="docs-footer-nextpage" href="../library/">Library »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.12 on <span class="colophon-date" title="Saturday 22 January 2022 02:45">Saturday 22 January 2022</span>. Using Julia version 1.6.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+Allowed exchange matrix: |   A  D-E -D+E |
+                         | D+E    B    C |
+                         |-D-E    C    B |
+Allowed DM vector: [0 -E -E]</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../getting-started/">« Getting Started</a><a class="docs-footer-nextpage" href="../library/">Library »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.12 on <span class="colophon-date" title="Wednesday 26 January 2022 20:00">Wednesday 26 January 2022</span>. Using Julia version 1.6.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
