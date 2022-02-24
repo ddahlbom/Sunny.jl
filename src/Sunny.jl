@@ -79,19 +79,19 @@ export dynamic_structure_factor, static_structure_factor
 include("WangLandau/BinnedArray.jl")
 export BinnedArray, filter_visited, reset!
 
-include("WangLandau/WangLandau.jl")
-export WangLandau, spherical_cap_update, init_bounded!, run!
-
 function __init__()
     @require GLMakie="e9467ef8-e4e7-5192-8a1a-b1aee30e663a" begin
         include("Plotting.jl")
         export plot_lattice, plot_spins, plot_bonds, plot_all_bonds
         export anim_integration, live_integration, live_langevin_integration
     end
-
+    
     @require MPI="da04e1cc-30fd-572f-bb4f-1f8673147195" begin
         include("ReplicaExchangeMC.jl")
         export init_MPI, xyz_to_file, Replica, run_REMC!, run_FBO!
+
+        include("WangLandau/REWL.jl")
+        export WLReplica, gaussian_spin_update, spherical_cap_update, init_bounded!, run_REWL!
     end
 end
 
