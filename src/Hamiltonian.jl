@@ -49,6 +49,7 @@ of all interactions internally.
 """
 struct HamiltonianCPU
     ext_field   :: Union{Nothing, ExternalFieldCPU}
+    onsite_ani  :: Union{Nothing, SimpleOnsiteQuarticCPU}
     heisenbergs :: Vector{HeisenbergCPU}
     diag_coups  :: Vector{DiagonalCouplingCPU}
     gen_coups   :: Vector{GeneralCouplingCPU}
@@ -69,6 +70,7 @@ function HamiltonianCPU(ints::Vector{<:AbstractInteraction}, crystal::Crystal,
                         latsize::Vector{Int64}, sites_info::Vector{SiteInfo};
                         μB=BOHR_MAGNETON::Float64, μ0=VACUUM_PERM::Float64)
     ext_field   = nothing
+    onsite_ani  = nothing
     heisenbergs = Vector{HeisenbergCPU}()
     diag_coups  = Vector{DiagonalCouplingCPU}()
     gen_coups   = Vector{GeneralCouplingCPU}()
@@ -84,6 +86,11 @@ function HamiltonianCPU(ints::Vector{<:AbstractInteraction}, crystal::Crystal,
             else
                 ext_field.Bgs .+= ExternalFieldCPU(int, sites_info; μB=μB).Bgs
             end
+        elseif isa(int, OnsiteQuartic)
+            if !isnothing(dipole_int)
+                @warn "Provided multiple onsite anisotropy interactions. Only using last one."
+            end
+            onsite_ani = convert_quartic(int, crystal, sites_info) 
         elseif isa(int, QuadraticInteraction)
             int_impl = convert_quadratic(int, crystal, sites_info)
             if isa(int_impl, HeisenbergCPU)
@@ -106,7 +113,7 @@ function HamiltonianCPU(ints::Vector{<:AbstractInteraction}, crystal::Crystal,
     end
 
     return HamiltonianCPU(
-        ext_field, heisenbergs, diag_coups, gen_coups, dipole_int, spin_mags
+        ext_field, onsite_ani, heisenbergs, diag_coups, gen_coups, dipole_int, spin_mags
     )
 end
 
@@ -114,6 +121,9 @@ function energy(spins::Array{Vec3}, ℋ::HamiltonianCPU) :: Float64
     E = 0.0
     if !isnothing(ℋ.ext_field)
         E += energy(spins, ℋ.ext_field)
+    end
+    if !isnothing(ℋ.onsite_ani)
+        E += energy(spins, ℋ.onsite_ani)
     end
     for heisen in ℋ.heisenbergs
         E += energy(spins, heisen)
@@ -148,6 +158,9 @@ function field!(B::Array{Vec3}, spins::Array{Vec3}, ℋ::HamiltonianCPU)
     fill!(B, SA[0.0, 0.0, 0.0])
     if !isnothing(ℋ.ext_field)
         _accum_neggrad!(B, ℋ.ext_field)
+    end
+    if !isnothing(ℋ.onsite_ani)
+        _accum_neggrad!(B, spins, ℋ.onsite_ani)
     end
     for heisen in ℋ.heisenbergs
         _accum_neggrad!(B, spins, heisen)

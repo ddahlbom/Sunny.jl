@@ -49,10 +49,12 @@ include("Lattice.jl")
 include("Interactions.jl")
 export heisenberg, exchange, dm_interaction
 export easy_axis, easy_plane, single_ion_anisotropy
-export external_field, dipole_dipole
+export external_field, OnsiteQuartic, dipole_dipole
 export SiteInfo
 
 include("PairInteractions.jl")
+
+include("QuarticInteractions.jl")
 
 include("Ewald.jl")
 

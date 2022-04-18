@@ -16,10 +16,16 @@ struct ExternalField <: AbstractInteraction
     B :: Vec3
 end
 
+struct OnsiteQuartic <: AbstractInteraction
+    J     :: Array{Float64, 4}
+    label :: String
+end
+
 struct DipoleDipole <: AbstractInteraction
     extent   :: Int
     η        :: Float64
 end
+
 
 """
     SiteInfo(site::Int, S, g)
