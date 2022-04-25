@@ -6,7 +6,7 @@ function plot_lattice!(ax, lattice::Lattice; colors=:Set1_9, markersize=200, lin
     colors = GLMakie.to_colormap(colors, 9)
 
     # Plot markers at each site
-    pts = GLMakie.Point3f.(vec(lattice))
+    pts = GLMakie.Point3f0.(vec(lattice))
     for (i, type) in enumerate(unique_types)
         basis_idxs = findall(isequal(type), lattice.types)
         GLMakie.scatter!(ax, pts; label=type, color=colors[i], markersize=markersize, kwargs...)
@@ -80,12 +80,12 @@ function plot_bonds(lattice::Lattice, ints::Vector{<:AbstractInteractionCPU};
             continue
         end
 
-        pts = Vector{GLMakie.Point3f}()
+        pts = Vector{GLMakie.Point3f0}()
         for (bond, _) in sublat_bonds(int.bondtable, basis_idx)
             new_cell = offset(cent_cell, bond.n, lattice.size)
             bond_pt = lattice[bond.j, new_cell]
-            push!(pts, GLMakie.Point3f(cent_pt))
-            push!(pts, GLMakie.Point3f(bond_pt))
+            push!(pts, GLMakie.Point3f0(cent_pt))
+            push!(pts, GLMakie.Point3f0(bond_pt))
         end
         if length(pts) == 0
             continue
@@ -199,25 +199,25 @@ end
 function plot_cells!(ax, lattice::Lattice; color=:grey, linewidth=1.0, kwargs...)
     lattice = brav_lattice(lattice)
 
-    pts = Vector{GLMakie.Point3f}()
+    pts = Vector{GLMakie.Point3f0}()
     nx, ny, nz = lattice.size
     for j in 1:ny
         for k in 1:nz
             bot_pt, top_pt = lattice[1, 1, j, k], lattice[1, nx, j, k]
-            push!(pts, GLMakie.Point3f(bot_pt))
-            push!(pts, GLMakie.Point3f(top_pt))
+            push!(pts, GLMakie.Point3f0(bot_pt))
+            push!(pts, GLMakie.Point3f0(top_pt))
         end
         for i in 1:nx
             left_pt, right_pt = lattice[1, i, j, 1], lattice[1, i, j, nz]
-            push!(pts, GLMakie.Point3f(left_pt))
-            push!(pts, GLMakie.Point3f(right_pt))
+            push!(pts, GLMakie.Point3f0(left_pt))
+            push!(pts, GLMakie.Point3f0(right_pt))
         end
     end
     for k in 1:nz
         for i in 1:nx
             left_pt, right_pt = lattice[1, i, 1, k], lattice[1, i, ny, k]
-            push!(pts, GLMakie.Point3f(left_pt))
-            push!(pts, GLMakie.Point3f(right_pt))
+            push!(pts, GLMakie.Point3f0(left_pt))
+            push!(pts, GLMakie.Point3f0(right_pt))
         end
     end
 
@@ -228,8 +228,8 @@ function plot_spins(lat::Lattice, spins; linecolor=:grey, arrowcolor=:red,
                     linewidth=0.1, arrowsize=0.2, arrowlength=0.2, kwargs...)
     fig, ax = _setup_scene()
 
-    pts = GLMakie.Point3f.(vec(lat))
-    vecs = GLMakie.Vec3f.(vec(spins))
+    pts = GLMakie.Point3f0.(vec(lat))
+    vecs = GLMakie.Vec3f0.(vec(spins))
 
     GLMakie.arrows!(
         ax, pts, vecs;
@@ -239,6 +239,18 @@ function plot_spins(lat::Lattice, spins; linecolor=:grey, arrowcolor=:red,
     fig
 end
 
+
+function plot_spins!(ax, lat::Lattice, spins; linecolor=:grey, arrowcolor=:red,
+                    linewidth=0.1, arrowsize=0.2, arrowlength=0.2, kwargs...)
+    pts = GLMakie.Point3f0.(vec(lat))
+    vecs = GLMakie.Vec3f0.(vec(spins))
+
+    GLMakie.arrows!(
+        ax, pts, vecs;
+        linecolor=linecolor, arrowcolor=arrowcolor, linewidth=linewidth, arrowsize=arrowsize,
+        lengthscale=arrowlength, kwargs...    
+    )
+end
 """
     plot_spins(sys::SpinSystem; linecolor=:grey, arrowcolor=:red, linewidth=0.1,
                                 arrowsize=0.3, arrowlength=1.0, kwargs...)
@@ -246,6 +258,7 @@ end
 Plot the spin configuration defined by `sys`. `kwargs` are passed to `GLMakie.arrows`.        
 """
 plot_spins(sys::SpinSystem; kwargs...) = plot_spins(sys.lattice, sys.sites; kwargs...)
+plot_spins!(ax, sys::SpinSystem; kwargs...) = plot_spins!(ax, sys.lattice, sys.sites; kwargs...)
 
 # No support for higher than 3D visualization, sorry!
 
@@ -269,8 +282,8 @@ function anim_integration(
 )
     fig, ax = _setup_scene()
 
-    pts = GLMakie.Point3f.(vec(sys.lattice))
-    vecs = GLMakie.Observable(GLMakie.Vec3f.(vec(sys)))
+    pts = GLMakie.Point3f0.(vec(sys.lattice))
+    vecs = GLMakie.Observable(GLMakie.Vec3f0.(vec(sys)))
     GLMakie.arrows!(
         ax, pts, vecs;
         linecolor=linecolor, arrowcolor=arrowcolor, linewidth=linewidth, arrowsize=arrowsize,
@@ -285,7 +298,7 @@ function anim_integration(
         for step in 1:steps_per_frame
             evolve!(integrator, Δt)
         end
-        vecs[] = GLMakie.Vec3f.(vec(sys))
+        vecs[] = GLMakie.Vec3f0.(vec(sys))
     end
 end
 
@@ -302,8 +315,8 @@ function live_integration(
 )
     fig, ax = _setup_scene()
 
-    pts = GLMakie.Point3f.(vec(sys.lattice))
-    vecs = GLMakie.Observable(GLMakie.Vec3f.(vec(sys)))
+    pts = GLMakie.Point3f0.(vec(sys.lattice))
+    vecs = GLMakie.Observable(GLMakie.Vec3f0.(vec(sys)))
     GLMakie.arrows!(
         ax, pts, vecs;
         linecolor=linecolor, arrowcolor=arrowcolor, linewidth=linewidth, arrowsize=arrowsize,
@@ -317,7 +330,7 @@ function live_integration(
         for step in 1:steps_per_frame
             evolve!(integrator, Δt)
         end
-        vecs[] = GLMakie.Vec3f.(vec(sys))
+        vecs[] = GLMakie.Vec3f0.(vec(sys))
         sleep(1/framerate)
     end
 end
@@ -329,13 +342,14 @@ Performs endless live Langevin Landau-Lifshitz integration
 in an interactive window.
 """
 function live_langevin_integration(
-    sys::SpinSystem, steps_per_frame, Δt, kT;
+    sys::SpinSystem, duration, Δt, kT;
+    steps_per_frame=1,
     linecolor=:grey, arrowcolor=:red, linewidth=0.1, arrowsize=0.2,
     arrowlength=0.2, α=0.1, framerate=30, kwargs...
 )
     fig, ax = _setup_scene()
-    pts = GLMakie.Point3f.(vec(sys.lattice))
-    vecs = GLMakie.Observable(GLMakie.Vec3f.(vec(sys)))
+    pts = GLMakie.Point3f0.(vec(sys.lattice))
+    vecs = GLMakie.Observable(GLMakie.Vec3f0.(vec(sys)))
     
     GLMakie.arrows!(
         ax, pts, vecs;
@@ -346,11 +360,13 @@ function live_langevin_integration(
 
     integrator = LangevinHeunP(sys, kT, α)
 
-    while true
+    runtime = 0.0
+    while runtime < duration
         for step in 1:steps_per_frame
             evolve!(integrator, Δt)
+            runtime += Δt
         end
-        vecs[] = GLMakie.Vec3f.(vec(sys))
+        vecs[] = GLMakie.Vec3f0.(vec(sys))
         sleep(1/framerate)
     end
 end

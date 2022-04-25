@@ -1,5 +1,11 @@
 abstract type AbstractQuarticIntCPU <: AbstractInteractionCPU end
 
+function onsite_quartic(D::Float64)
+    J = zeros(3,3,3,3)
+    J[1,1,1,1] = J[2,2,2,2] = J[3,3,3,3] = D
+    OnsiteQuartic(J, "onsite")
+end
+
 """
     SimpleOnsiteQuarticCPU
 

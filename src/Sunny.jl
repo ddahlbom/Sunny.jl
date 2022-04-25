@@ -55,6 +55,7 @@ export SiteInfo
 include("PairInteractions.jl")
 
 include("QuarticInteractions.jl")
+export onsite_quartic
 
 include("Ewald.jl")
 
@@ -87,7 +88,7 @@ export WangLandau, spherical_cap_update, init_bounded!, run!
 function __init__()
     @require GLMakie="e9467ef8-e4e7-5192-8a1a-b1aee30e663a" begin
         include("Plotting.jl")
-        export plot_lattice, plot_spins, plot_bonds, plot_all_bonds
+        export plot_lattice, plot_spins, plot_spins!, plot_bonds, plot_all_bonds
         export anim_integration, live_integration, live_langevin_integration
     end
 

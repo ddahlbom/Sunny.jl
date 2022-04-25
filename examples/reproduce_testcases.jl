@@ -104,7 +104,7 @@ function plot_S_cut_afmdiamond(S, qz, J, spin; maxω=nothing, chopω=nothing)
 
     pathcoords = range(0., 1.; length=pathlen)
     ωs = range(0., chopω, length=cutT)
-    heatmap(pathcoords, ωs, cuts'; color=:plasma, clim=(0.0, 1.5e7))
+    Plots.heatmap(pathcoords, ωs, cuts'; color=:plasma, clim=(0.0, 1.5e7))
 
     # Plot the analytic linear spin-wave prediction ω(q) on top
     qs = zeros(Sunny.Vec3, πx+πy+min(πx,πy)+1)
@@ -118,14 +118,14 @@ function plot_S_cut_afmdiamond(S, qz, J, spin; maxω=nothing, chopω=nothing)
         qs[πx+πy+1+i] = Sunny.Vec3(0.5-i/(2πx), 0.5-i/(2πy), qz/(2πz))
     end
     ωs = linear_sw_diamond_heisenberg.(qs, J, spin)
-    plot!(pathcoords, ωs, lw=3, color=:lightgrey, label="Linear SW")
+    Plots.plot!(pathcoords, ωs, lw=3, color=:lightgrey, label="Linear SW")
 
-    xticks!(
+    Plots.xticks!(
         [0, (1+πx)/pathlen, (1+πx+πy)/pathlen, 1.0],
         [L"(0, 0)", L"(\pi, 0)", L"(\pi, \pi)", L"(0, 0)"]
     )
-    ylabel!(L"$\omega$ (meV)")
-    plot!()
+    Plots.ylabel!(L"$\omega$ (meV)")
+    Plots.plot!()
 end
 
 function plot_many_cuts_afmdiamond(S, J, spin; maxω=nothing, chopω=nothing)

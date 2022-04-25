@@ -9,46 +9,23 @@ using GLMakie
 using Random
 
 
-function plot_spins(lat, spins; linecolor=:grey, arrowcolor=:red,
-                    linewidth=0.1, arrowsize=0.3, arrowlength=1.0, kwargs...)
-    sites = reinterpret(reshape, Float64, collect(lat))
-    spins = reinterpret(reshape, Float64, spins)
-
-    xs = vec(sites[1, 1:end, 1:end, 1:end, 1:end])
-    ys = vec(sites[2, 1:end, 1:end, 1:end, 1:end])
-    zs = vec(sites[3, 1:end, 1:end, 1:end, 1:end])
-    us = arrowlength * vec(spins[1, 1:end, 1:end, 1:end, 1:end])
-    vs = arrowlength * vec(spins[2, 1:end, 1:end, 1:end, 1:end])
-    ws = arrowlength * vec(spins[3, 1:end, 1:end, 1:end, 1:end])
-
-    fig = GLMakie.arrows(
-        xs, ys, zs, us, vs, ws;
-        linecolor=linecolor, arrowcolor=arrowcolor, linewidth=linewidth, arrowsize=arrowsize,
-        show_axis=false, kwargs...    
-    )
-    fig
-end
-
-"""
-    plot_spins(sys::SpinSystem; linecolor=:grey, arrowcolor=:red, linewidth=0.1,
-                                arrowsize=0.3, arrowlength=1.0, kwargs...)
-
-Plot the spin configuration defined by `sys`. `kwargs` are passed to `GLMakie.arrows`.        
-"""
-plot_spins(sys::SpinSystem; kwargs...) = plot_spins(sys.lattice, sys.sites; kwargs...)
 
 function test_quartic_anisotropy(; rng=MersenneTwister())
     crystal = Sunny.fcc_crystal()
 
     ## Specify model parameters
-    J_exch = 1.0           # Exchange parameter 
-    D = zeros(3,3,3,3)     # Onsite anisotropy tensor
-    D[1,1,1,1] = D[2,2,2,2] = D[3,3,3,3] = 1.0
+    J  = 1.0           # Exchange parameter 
+    J′ = -1.0
+    K  = 1.0
+    D  = zeros(3,3,3,3)     # Onsite anisotropy tensor
+    J_mat = diagm([J, J, J+K])
+    D[1,1,1,1] = D[2,2,2,2] = D[3,3,3,3] = -1.0
     interactions = [
-        heisenberg(J_exch, Bond(1, 2, [0,0,0])),
+        exchange(J_mat, Bond(1, 2, [0,0,0])),
+        heisenberg(J′, Bond(1, 1, [1,0,0])),
         OnsiteQuartic(D, "onsite"),
     ]
-    dims = (4,4,4)
+    dims = (2,2,2)
     S = 1.0
 
     ## Initialize system
@@ -56,23 +33,27 @@ function test_quartic_anisotropy(; rng=MersenneTwister())
     rand!(rng, sys)
 
     ## Integration parameters
-    Δt = abs(0.02 / (S^2 * J_exch))     # Units of 1/meV
+    Δt = abs(0.02 / (S^2 * J))     # Units of 1/meV
     kT = 0.0
     α  = 0.1
-    nsteps = 10_000
+    nsteps = 20_000
 
     ## Integrate
-    integrator = LangevinHeunP(sys, kT, α) 
+    live_langevin_integration(sys, 40.0, Δt, kT; steps_per_frame=5)
 
-    @time for _ ∈ 1:nsteps
-        evolve!(integrator, Δt)
-    end
+    # sampler = LangevinSampler(sys, kT, α, 0.0, 1000)
+    # sf = static_structure_factor(sys, sampler; nsamples=100)
+    # integrator = LangevinHeunP(sys, kT, α) 
+    # @time for _ ∈ 1:nsteps
+    #     evolve!(integrator, Δt)
+    # end
 
     ##Plot
-    fig = plot_spins(integrator.sys; arrowlength=0.5)
+    # fig = plot_spins(integrator.sys; arrowlength=0.5)
 
 
-    return fig
+    # return fig
+    # return sf
 end
 
 
